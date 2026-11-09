@@ -78,6 +78,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
             // Синхронизируем коллекцию плиток с содержимым папок
             var scanned = _scanner.Scan(settings.MoviesFolder, settings.SeriesFolder);
+            Log.Write($"[СКАНИРОВАНИЕ] Найдено {scanned.Count} тайтлов " +
+                      $"(фильмы: {settings.MoviesFolder}, сериалы: {settings.SeriesFolder})");
             Items.Clear();
             foreach (var media in scanned)
             {
@@ -141,17 +143,20 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 }
                 else
                 {
+                    Log.Write($"[КАТАЛОГ] Метаданные не найдены: \"{tile.Item.Name}\"");
                     tile.Item.Description = "Метаданные не найдены в Кинопоиске.";
                 }
             }
             catch (InvalidOperationException ex)
             {
                 // Проблема с ключом или лимитом — прекращаем обращения к API
+                Log.Write($"[КАТАЛОГ] Прекращение загрузки: {ex.Message}");
                 StatusText = ex.Message;
                 break;
             }
             catch (Exception ex)
             {
+                Log.Write($"[КАТАЛОГ] Ошибка для \"{tile.Item.Name}\": {ex.GetType().Name}: {ex.Message}");
                 tile.Item.Description = $"Не удалось получить данные: {ex.Message}";
             }
 

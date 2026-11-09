@@ -14,6 +14,14 @@ public static partial class TitleParser
     [GeneratedRegex(@"(?<!\d)(19\d{2}|20\d{2})(?!\d)")]
     private static partial Regex YearRegex();
 
+    // Метки сезонов в именах папок сериалов: "Сезон 1", "Season 2", "S01"
+    [GeneratedRegex(@"\b(сезон|season)\s*\d+\b|\bs\d{1,2}\b", RegexOptions.IgnoreCase)]
+    private static partial Regex SeasonRegex();
+
+    // Метки языка вида "3xRus", "2xEng"
+    [GeneratedRegex(@"\b\d+x(rus|eng|ukr)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex LangTrackRegex();
+
     // Служебные слова, характерные для рипов (качество, кодеки, релиз-группы)
     private static readonly HashSet<string> NoiseTags = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -22,7 +30,10 @@ public static partial class TitleParser
         "x264", "x265", "h264", "h265", "HEVC", "AVC", "HDTV", "SATRip", "TVRip",
         "DVDScr", "TS", "TC", "CAM", "AC3", "DTS", "AAC", "MP3",
         "LostFilm", "HDRezka", "Kinoshow", "Extended", "Unrated", "Directors", "Cut",
-        "MVO", "DUB", "DVO", "APO", "VO", "Dual", "ITunes", "Netflix", "AMZN", "NF"
+        "MVO", "DUB", "DVO", "APO", "VO", "Dual", "ITunes", "Netflix", "AMZN", "NF",
+        // После замены дефисов пробелами "WEB-DL" превращается в "WEB DL",
+        // поэтому дополняем набор одиночными техническими словами
+        "WEB", "DL", "H", "264", "265", "Rus", "Eng", "Ukr", "TeamHD", "HDRezka"
     };
 
     /// <summary>
@@ -52,6 +63,10 @@ public static partial class TitleParser
                          .Replace('(', ' ').Replace(')', ' ')
                          .Replace('[', ' ').Replace(']', ' ')
                          .Replace('-', ' ');
+
+        // Убираем метки сезонов и языковых дорожек, чтобы искать тайтл по чистому названию
+        cleaned = SeasonRegex().Replace(cleaned, " ");
+        cleaned = LangTrackRegex().Replace(cleaned, " ");
 
         // Убираем служебные теги качества и т.п.
         var words = cleaned.Split(' ', StringSplitOptions.RemoveEmptyEntries)

@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace CinemaHall.Models.Kinopoisk;
 
 /// <summary>
@@ -20,7 +22,8 @@ public class SearchFilmDto
     public string? NameOriginal { get; set; }
     public string? Year { get; set; }
 
-    /// <summary>Тип тайтла: FILM, TV_SERIES, TV_SHOW и т.д.</summary>
+    /// <summary>Тип тайтла: FILM, TV_SERIES, TV_SHOW и т.д. (в API поле называется "type").</summary>
+    [JsonPropertyName("type")]
     public string? FilmType { get; set; }
 
     public string? PosterUrlPreview { get; set; }
@@ -37,7 +40,10 @@ public class FilmDetailsDto
     public int KinopoiskId { get; set; }
     public string? NameRu { get; set; }
     public string? NameOriginal { get; set; }
-    public string? Year { get; set; }
+
+    /// <summary>Год: в эндпоинте деталей приходит числом, в поиске — строкой.</summary>
+    public int? Year { get; set; }
+
     public string? PosterUrl { get; set; }
     public string? Description { get; set; }
     public string? ShortDescription { get; set; }

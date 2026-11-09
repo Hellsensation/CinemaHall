@@ -79,10 +79,11 @@ public class MetadataCache
             var dir = DirFor(item);
             Directory.CreateDirectory(dir);
             File.WriteAllText(Path.Combine(dir, "meta.json"), JsonSerializer.Serialize(item, JsonOptions));
+            Log.Write($"[КЭШ] Сохранено: \"{item.Name}\" -> {dir}");
         }
-        catch
+        catch (Exception ex)
         {
-            // Ошибка записи кэша не должна ломать работу приложения
+            Log.Write($"[КЭШ] ОШИБКА сохранения \"{item.Name}\": {ex.Message}");
         }
     }
 
@@ -115,10 +116,12 @@ public class MetadataCache
             }
 
             item.PosterLocalPath = posterPath;
+            Log.Write($"[КЭШ] Постер скачан: {posterPath}");
             return posterPath;
         }
-        catch
+        catch (Exception ex)
         {
+            Log.Write($"[КЭШ] ОШИБКА скачивания постера \"{item.Name}\": {ex.Message}");
             return null;
         }
     }

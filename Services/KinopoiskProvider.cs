@@ -2,6 +2,7 @@ using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using CinemaHall.Models;
 using CinemaHall.Models.Kinopoisk;
 
@@ -16,7 +17,11 @@ public class KinopoiskProvider : IMetadataProvider
 {
     private const string BaseUrl = "https://kinopoiskapiunofficial.tech";
 
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    // AllowReadingFromString: в разных эндпоинтах числа приходят то числом, то строкой
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        NumberHandling = JsonNumberHandling.AllowReadingFromString
+    };
 
     private readonly HttpClient _http;
 
@@ -40,11 +45,13 @@ public class KinopoiskProvider : IMetadataProvider
     {
         // Формируем поисковое выражение: "название год"
         var expression = item.Year is null ? item.Name : $"{item.Name} {item.Year}";
+        Log.Write($"[API] Поиск: \"{expression}\" (путь: {item.Path})");
         var url = $"{BaseUrl}/api/v2.1/films/search-by-keyword?keyword={Uri.EscapeDataString(expression)}&page=1";
 
         var search = await SendAsync<SearchByKeywordResponse>(url, ct);
         if (search?.Films is not { Count: > 0 })
         {
+            Log.Write($"[API] Поиск без результатов по \"{expression}\"");
             // Вторая попытка без года (год в имени файла иногда бывает не годом выпуска)
             if (item.Year is null)
             {
@@ -55,6 +62,7 @@ public class KinopoiskProvider : IMetadataProvider
             search = await SendAsync<SearchByKeywordResponse>(url, ct);
             if (search?.Films is not { Count: > 0 })
             {
+                Log.Write($"[API] Повторный поиск без результатов по \"{item.Name}\"");
                 return false;
             }
         }
@@ -63,8 +71,10 @@ public class KinopoiskProvider : IMetadataProvider
         var best = PickBest(search.Films, item.Name, item.Year, item.Kind);
         if (best is null)
         {
+            Log.Write("[API] Подходящий результат не выбран");
             return false;
         }
+        Log.Write($"[API] Найден: id={best.FilmId} \"{best.NameRu}\" ({best.Year})");
 
         // Заполняем данные из результатов поиска
         ApplySearchResult(item, best);
@@ -204,11 +214,14 @@ public class KinopoiskProvider : IMetadataProvider
 
             if (!response.IsSuccessStatusCode)
             {
+                Log.Write($"[API] Неуспешный статус {(int)response.StatusCode}: {url}");
                 return default;
             }
 
             await using var stream = await response.Content.ReadAsStreamAsync(ct);
-            return await JsonSerializer.DeserializeAsync<T>(stream, JsonOptions, ct);
+            var result = await JsonSerializer.DeserializeAsync<T>(stream, JsonOptions, ct);
+            Log.Write($"[API] Ответ получен (200): {url}");
+            return result;
         }
         finally
         {
