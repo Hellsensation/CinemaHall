@@ -9,7 +9,14 @@
     <UseWPF>true</UseWPF>
     <RootNamespace>CinemaHall</RootNamespace>
     <AssemblyName>CinemaHall</AssemblyName>
+    <!-- Иконка exe (проводник, ярлык запуска) -->
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Иконка как WPF-ресурс для Icon у окон (панель задач, Alt-Tab) -->
+    <Resource Include="Assets\app.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <!-- MVVM-инфраструктура: ObservableObject, RelayCommand и т.д. -->
