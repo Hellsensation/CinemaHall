@@ -84,9 +84,9 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Сетка плиток афиш -->
-            <ListBox ItemsSource="{Binding Items}"
-                     SelectedItem="{Binding SelectedItem}"
+            <!-- Сетка плиток афиш (выделение передаётся в VM через SelectionChanged) -->
+            <ListBox x:Name="TilesList"
+                     ItemsSource="{Binding Items}"
                      ItemTemplate="{StaticResource TileTemplate}"
                      Background="Transparent"
                      BorderThickness="0"
@@ -144,11 +144,13 @@
                                 FontWeight="Bold"
                                    TextWrapping="Wrap"
                                 Margin="0,16,0,4"/>
+                        <!-- Mode=OneWay обязателен: привязка Run.Text по умолчанию TwoWay,
+                             а свойства только для чтения вызывают исключение -->
                         <TextBlock Foreground="{StaticResource TextDimBrush}"
                                 FontSize="13"
                                 Margin="0,0,0,2">
-                            <Run Text="{Binding KindLabel}"/>
-                            <Run Text="{Binding RatingLabel}"
+                            <Run Text="{Binding KindLabel, Mode=OneWay}"/>
+                            <Run Text="{Binding RatingLabel, Mode=OneWay}"
                                     Foreground="#F5C518"/>
                         </TextBlock>
                         <TextBlock Text="{Binding GenresLabel}"

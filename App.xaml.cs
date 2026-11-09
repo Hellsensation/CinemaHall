@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using System.Windows;
+using CinemaHall.Services;
 using CinemaHall.ViewModels;
 using CinemaHall.Views;
 
@@ -26,6 +28,11 @@ public partial class App : Application
         }
         catch { }
 
+        // Диагностика: все ошибки привязок WPF пишем в лог
+        PresentationTraceSources.Refresh();
+        PresentationTraceSources.DataBindingSource.Listeners.Add(new BindingTraceListener());
+        PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Error;
+
         // Создаём и показываем главное окно с главным ViewModel
         var main = new MainWindow
         {
@@ -33,5 +40,19 @@ public partial class App : Application
         };
         MainWindow = main;
         main.Show();
+    }
+}
+
+/// <summary>Прослушиватель ошибок привязок WPF, пишет их в файловый лог.</summary>
+public class BindingTraceListener : TraceListener
+{
+    public override void Write(string? message) { }
+
+    public override void WriteLine(string? message)
+    {
+        if (!string.IsNullOrWhiteSpace(message))
+        {
+            Log.Write($"[БИНДИНГ] {message}");
+        }
     }
 }

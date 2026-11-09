@@ -25,6 +25,11 @@ public partial class MainWindow : Window
             return;
         }
 
+        // Выделение плитки передаём в ViewModel явно: TwoWay-привязка
+        // ListBox.SelectedItem вызывает ошибку движка привязок WPF
+        TilesList.SelectionChanged += (_, _) =>
+            vm.SelectedItem = TilesList.SelectedItem as MediaItemViewModel;
+
         vm.SettingsRequested += OnSettingsRequested;
 
         // При первом запуске (нет ключа или папок) сначала открываем настройки

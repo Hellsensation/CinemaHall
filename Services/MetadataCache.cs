@@ -62,6 +62,8 @@ public class MetadataCache
             item.Rating = cached.Rating;
             item.Genres = cached.Genres ?? new List<string>();
 
+            Log.Write($"[КЭШ] Загружено \"{item.Name}\": desc={item.Description?.Length ?? 0} симв., " +
+                      $"poster={(item.PosterLocalPath != null ? "да" : "нет")}, genres={item.Genres.Count}");
             return true;
         }
         catch
