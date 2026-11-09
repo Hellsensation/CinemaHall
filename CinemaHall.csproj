@@ -4,8 +4,16 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
-    <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Используем WPF вместо WinForms -->
+    <UseWPF>true</UseWPF>
+    <RootNamespace>CinemaHall</RootNamespace>
+    <AssemblyName>CinemaHall</AssemblyName>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- MVVM-инфраструктура: ObservableObject, RelayCommand и т.д. -->
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+  </ItemGroup>
 
 </Project>
