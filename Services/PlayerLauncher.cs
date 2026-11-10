@@ -50,6 +50,26 @@ public static class PlayerLauncher
         }
     }
 
+    /// <summary>
+    /// Запускает воспроизведение конкретного файла (например, выбранной серии)
+    /// через системный плеер по умолчанию.
+    /// </summary>
+    public static void PlayFile(string path)
+    {
+        if (File.Exists(path))
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = path,
+                UseShellExecute = true
+            });
+        }
+        else if (Directory.Exists(path))
+        {
+            OpenInExplorer(path);
+        }
+    }
+
     /// <summary>Открывает папку в Проводнике Windows.</summary>
     private static void OpenInExplorer(string folder)
     {

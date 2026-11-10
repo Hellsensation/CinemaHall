@@ -33,15 +33,15 @@
                     <TextBlock Text="{Binding DisplayName}"
                                Foreground="{StaticResource TextBrush}"
                                FontSize="13"
-                            FontWeight="SemiBold"
+                               FontWeight="SemiBold"
                                TextWrapping="Wrap"
-                            MaxHeight="38"
+                               MaxHeight="38"
                                TextTrimming="CharacterEllipsis"
                                Margin="2,8,2,2"/>
                     <TextBlock Text="{Binding KindLabel}"
                                Foreground="{StaticResource TextDimBrush}"
                                FontSize="11"
-                            Margin="2,2,2,0"/>
+                               Margin="2,2,2,0"/>
                 </StackPanel>
             </Border>
         </DataTemplate>
@@ -55,12 +55,12 @@
             <DockPanel>
                 <TextBlock Text="🎬 CinemaHall"
                            FontSize="18"
-                        FontWeight="Bold"
+                           FontWeight="Bold"
                            Foreground="{StaticResource TextBrush}"
                            VerticalAlignment="Center"/>
                 <StackPanel Orientation="Horizontal"
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Center">
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center">
                     <Button Content="Обновить"
                             Command="{Binding RefreshCommand}"/>
                     <Button Content="Настройки"
@@ -110,7 +110,7 @@
                                     </Border>
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsSelected"
-                                                Value="True">
+                                                 Value="True">
                                             <Setter TargetName="Bd"
                                                     Property="Background"
                                                     Value="{StaticResource TileSelectedBrush}"/>
@@ -130,7 +130,7 @@
                     Visibility="{Binding HasSelectedItem, Converter={StaticResource BoolToVis}}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel DataContext="{Binding SelectedItem}"
-                            Margin="20">
+                                Margin="20">
                         <Border CornerRadius="10"
                                 Height="340"
                                 Background="#101018"
@@ -142,29 +142,54 @@
                         <TextBlock Text="{Binding DisplayName}"
                                    Foreground="{StaticResource TextBrush}"
                                    FontSize="20"
-                                FontWeight="Bold"
+                                   FontWeight="Bold"
                                    TextWrapping="Wrap"
-                                Margin="0,16,0,4"/>
+                                   Margin="0,16,0,4"/>
                         <!-- Mode=OneWay обязателен: привязка Run.Text по умолчанию TwoWay,
                              а свойства только для чтения вызывают исключение -->
                         <TextBlock Foreground="{StaticResource TextDimBrush}"
-                                FontSize="13"
-                                Margin="0,0,0,2">
+                                   FontSize="13"
+                                   Margin="0,0,0,2">
                             <Run Text="{Binding KindLabel, Mode=OneWay}"/>
                             <Run Text="{Binding RatingLabel, Mode=OneWay}"
-                                    Foreground="#F5C518"/>
+                                 Foreground="#F5C518"/>
                         </TextBlock>
                         <TextBlock Text="{Binding GenresLabel}"
                                    Foreground="{StaticResource TextDimBrush}"
                                    FontSize="13"
-                                TextWrapping="Wrap"/>
+                                   TextWrapping="Wrap"/>
 
                         <TextBlock Text="{Binding Description}"
                                    Foreground="{StaticResource TextBrush}"
                                    FontSize="14"
-                                LineHeight="21"
+                                   LineHeight="21"
                                    TextWrapping="Wrap"
-                                Margin="0,14,0,20"/>
+                                   Margin="0,14,0,20"/>
+
+                        <!-- Список серий (только для сериалов): клик по серии запускает её -->
+                        <StackPanel Visibility="{Binding HasEpisodes, Converter={StaticResource BoolToVis}}"
+                                    Margin="0,0,0,20">
+                            <TextBlock Text="Серии"
+                                       Foreground="{StaticResource TextBrush}"
+                                       FontSize="16"
+                                       FontWeight="Bold"
+                                       Margin="0,0,0,8"/>
+                            <ItemsControl ItemsSource="{Binding Episodes}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Content="{Binding DisplayName}"
+                                                ToolTip="{Binding FilePath}"
+                                                Command="{Binding DataContext.PlayEpisodeCommand,
+                                                          RelativeSource={RelativeSource AncestorType=Window}}"
+                                                CommandParameter="{Binding}"
+                                                HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Left"
+                                                Margin="0,0,0,4"
+                                                Padding="10,6"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
 
                         <Button Content="▶  Смотреть"
                                 Style="{StaticResource PlayButtonStyle}"

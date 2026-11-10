@@ -1,4 +1,7 @@
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using CinemaHall.Models;
+using CinemaHall.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace CinemaHall.ViewModels;
@@ -14,7 +17,19 @@ public partial class MediaItemViewModel : ObservableObject
     public MediaItemViewModel(MediaItem item)
     {
         Item = item;
+
+        // При изменении списка серий обновляем видимость секции «Серии»
+        Episodes.CollectionChanged += (_, _) =>
+            OnPropertyChanged(nameof(HasEpisodes));
+
+        LoadEpisodes();
     }
+
+    /// <summary>Серии сериала (пусто для фильмов).</summary>
+    public ObservableCollection<EpisodeViewModel> Episodes { get; } = new();
+
+    /// <summary>Есть ли серии для отображения (управляет видимостью секции).</summary>
+    public bool HasEpisodes => Episodes.Count > 0;
 
     /// <summary>Отображаемое название с годом: «Начало (2010)».</summary>
     public string DisplayName =>
@@ -37,9 +52,28 @@ public partial class MediaItemViewModel : ObservableObject
     /// <summary>Локальный путь к постеру.</summary>
     public string? PosterLocalPath => Item.PosterLocalPath;
 
+    /// <summary>Пересобирает список серий из папки сериала.</summary>
+    public void LoadEpisodes()
+    {
+        Episodes.Clear();
+
+        if (Item.Kind != MediaKind.Series)
+        {
+            return;
+        }
+
+        foreach (var episode in EpisodeLister.GetEpisodes(Item.Path))
+        {
+            Episodes.Add(new EpisodeViewModel(episode));
+        }
+    }
+
     /// <summary>Обновляет все привязки после дозагрузки метаданных или постера.</summary>
     public void Refresh()
     {
+        // Состав папки мог измениться (FileSystemWatcher) — пересканируем серии
+        LoadEpisodes();
+
         OnPropertyChanged(nameof(DisplayName));
         OnPropertyChanged(nameof(KindLabel));
         OnPropertyChanged(nameof(RatingLabel));

@@ -170,6 +170,18 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
+    /// <summary>
+    /// Клик по серии в списке: запуск выбранного эпизода через стандартный плеер.
+    /// </summary>
+    [RelayCommand]
+    private void PlayEpisode(EpisodeViewModel? episode)
+    {
+        if (episode is not null)
+        {
+            PlayerLauncher.PlayFile(episode.Episode.Path);
+        }
+    }
+
     /// <summary>Кнопка «Смотреть»: запуск воспроизведения через стандартный плеер.</summary>
     [RelayCommand]
     private void Play()
