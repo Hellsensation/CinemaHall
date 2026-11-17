@@ -42,6 +42,21 @@
                                Foreground="{StaticResource TextDimBrush}"
                                FontSize="11"
                                Margin="2,2,2,0"/>
+                    <!-- Прогресс просмотра сериала на плитке -->
+                    <StackPanel Visibility="{Binding HasWatchProgress, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="{Binding WatchSummaryLabel}"
+                                   Foreground="{StaticResource TextDimBrush}"
+                                   FontSize="11"
+                                   Margin="2,3,2,0"/>
+                        <ProgressBar Value="{Binding WatchProgress, Mode=OneWay}"
+                                     Minimum="0"
+                                Maximum="1"
+                                     Height="4"
+                                     Margin="2,4,2,0"
+                                     Background="#101018"
+                                     Foreground="{StaticResource AccentBrush}"
+                                     BorderThickness="0"/>
+                    </StackPanel>
                 </StackPanel>
             </Border>
         </DataTemplate>
@@ -169,23 +184,66 @@
                         <!-- Список серий (только для сериалов): клик по серии запускает её -->
                         <StackPanel Visibility="{Binding HasEpisodes, Converter={StaticResource BoolToVis}}"
                                     Margin="0,0,0,20">
-                            <TextBlock Text="Серии"
+                            <TextBlock Text="{Binding EpisodesHeader}"
                                        Foreground="{StaticResource TextBrush}"
                                        FontSize="16"
                                        FontWeight="Bold"
+                                       TextWrapping="Wrap"
                                        Margin="0,0,0,8"/>
                             <ItemsControl ItemsSource="{Binding Episodes}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Button Content="{Binding DisplayName}"
-                                                ToolTip="{Binding FilePath}"
-                                                Command="{Binding DataContext.PlayEpisodeCommand,
-                                                          RelativeSource={RelativeSource AncestorType=Window}}"
-                                                CommandParameter="{Binding}"
-                                                HorizontalAlignment="Stretch"
-                                                HorizontalContentAlignment="Left"
-                                                Margin="0,0,0,4"
-                                                Padding="10,6"/>
+                                        <Grid Margin="0,0,0,4">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Переключатель «просмотрено»: клик ставит или снимает отметку -->
+                                            <Button Grid.Column="0"
+                                                    Content="{Binding WatchedGlyph}"
+                                                    ToolTip="{Binding WatchedTooltip}"
+                                                    Command="{Binding DataContext.ToggleWatchedCommand,
+                                                              RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    CommandParameter="{Binding}"
+                                                    Width="34"
+                                                    Padding="0,6"
+                                                    Margin="0,0,6,0"
+                                                    Background="Transparent"
+                                                    Foreground="{StaticResource TextDimBrush}"/>
+
+                                            <Button Grid.Column="1"
+                                                    Content="{Binding DisplayName}"
+                                                    ToolTip="{Binding FilePath}"
+                                                    Command="{Binding DataContext.PlayEpisodeCommand,
+                                                              RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    CommandParameter="{Binding}"
+                                                    HorizontalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Left"
+                                                    Padding="10,6">
+                                                <Button.Style>
+                                                    <Style TargetType="Button"
+                                                           BasedOn="{StaticResource {x:Type Button}}">
+                                                        <Style.Triggers>
+                                                            <!-- Просмотренная серия приглушается -->
+                                                            <DataTrigger Binding="{Binding IsWatched}"
+                                                                    Value="True">
+                                                                <Setter Property="Foreground"
+                                                                        Value="{StaticResource TextDimBrush}"/>
+                                                                <Setter Property="Opacity"
+                                                                        Value="0.65"/>
+                                                            </DataTrigger>
+                                                            <!-- Следующая к просмотру выделяется -->
+                                                            <DataTrigger Binding="{Binding IsNext}"
+                                                                    Value="True">
+                                                                <Setter Property="FontWeight"
+                                                                        Value="Bold"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Button.Style>
+                                            </Button>
+                                        </Grid>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>

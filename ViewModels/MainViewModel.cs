@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using CinemaHall.Models;
 using CinemaHall.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -13,8 +14,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private readonly SettingsService _settingsService = new();
     private readonly MetadataCache _cache = new();
     private readonly LibraryScanner _scanner = new();
+    private readonly WatchHistoryService _history = new();
+    private readonly PlaybackTracker _tracker;
     private KinopoiskProvider? _provider;
     private CancellationTokenSource? _refreshCts;
+    private AutoMarkMode _autoMarkMode = AutoMarkMode.AfterThreshold;
+    private int _autoMarkThresholdMinutes = 10;
 
     [ObservableProperty]
     private ObservableCollection<MediaItemViewModel> _items = new();
@@ -30,6 +35,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     public MainViewModel()
     {
+        // Автопометка «просмотрено» по таймеру: плеер внешний, поэтому
+        // отсчитываем время с момента запуска файла
+        _tracker = new PlaybackTracker(_history);
+        _tracker.Watched += (_, e) =>
+            System.Windows.Application.Current?.Dispatcher.InvokeAsync(() => OnEpisodeWatched(e));
+
         // Изменения в библиотеке (FileSystemWatcher) -> повторное построение каталога
         _scanner.LibraryChanged += () =>
             System.Windows.Application.Current?.Dispatcher.InvokeAsync(
@@ -66,6 +77,23 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             var settings = _settingsService.Load();
 
+            // Настройки автопометки применяются к новым запускам серий
+            _autoMarkMode = settings.AutoMarkMode;
+            _autoMarkThresholdMinutes = settings.AutoMarkThresholdMinutes is >= 1 and <= 180
+                ? settings.AutoMarkThresholdMinutes
+                : 10;
+
+            // Если приложение закрыли, не дождавшись автопометки, досмотренные
+            // серии отмечаем при следующем запуске
+            if (_autoMarkMode == AutoMarkMode.AfterThreshold)
+            {
+                var recovered = _history.RecoverPending(TimeSpan.FromMinutes(_autoMarkThresholdMinutes));
+                if (recovered > 0)
+                {
+                    Log.Write($"[ПРОСМОТРЫ] Отмечено просмотренными при восстановлении: {recovered}.");
+                }
+            }
+
             // Провайдер создаётся один раз; при смене ключа в настройках будет
             // пересоздан при следующем обновлении
             if (_provider is null && !string.IsNullOrWhiteSpace(settings.KinopoiskApiKey))
@@ -83,7 +111,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             Items.Clear();
             foreach (var media in scanned)
             {
-                Items.Add(new MediaItemViewModel(media));
+                Items.Add(new MediaItemViewModel(media, _history));
             }
 
             StatusText = $"Найдено: {Items.Count}. Загрузка метаданных...";
@@ -171,25 +199,121 @@ public partial class MainViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Клик по серии в списке: запуск выбранного эпизода через стандартный плеер.
+    /// Клик по серии в списке: запуск эпизода и (по настройке) автопометка просмотра.
     /// </summary>
     [RelayCommand]
     private void PlayEpisode(EpisodeViewModel? episode)
     {
-        if (episode is not null)
+        if (episode is null)
+        {
+            return;
+        }
+
+        var owner = FindOwner(episode);
+        if (owner is null)
+        {
+            return;
+        }
+
+        var seriesFolder = owner.Item.Path;
+
+        try
         {
             PlayerLauncher.PlayFile(episode.Episode.Path);
         }
+        catch (Exception ex)
+        {
+            StatusText = $"Не удалось запустить серию: {ex.Message}";
+            return;
+        }
+
+        _tracker.Start(episode.Episode, seriesFolder, _autoMarkMode, _autoMarkThresholdMinutes);
+
+        // Состояние берём из истории: режим «сразу» уже поставил отметку,
+        // режим «через N минут» — только начал просмотр
+        episode.State = _history.GetState(seriesFolder, episode.Episode);
+        owner.RefreshWatchSummary();
+
+        StatusText = _autoMarkMode == AutoMarkMode.AfterThreshold
+            ? $"Запущено: {episode.DisplayName}. Отметим просмотренной через {_autoMarkThresholdMinutes} мин."
+            : $"Запущено: {episode.DisplayName}";
     }
 
-    /// <summary>Кнопка «Смотреть»: запуск воспроизведения через стандартный плеер.</summary>
+    /// <summary>
+    /// Ручное переключение отметки «просмотрено» у серии.
+    /// </summary>
+    [RelayCommand]
+    private void ToggleWatched(EpisodeViewModel? episode)
+    {
+        if (episode is null)
+        {
+            return;
+        }
+
+        var owner = FindOwner(episode);
+        if (owner is null)
+        {
+            return;
+        }
+
+        // Ручная отметка отменяет отложенную автопометку
+        _tracker.Cancel();
+
+        var state = episode.IsWatched ? WatchState.None : WatchState.Watched;
+        _history.SetState(owner.Item.Path, episode.Episode, state);
+        episode.State = state;
+        owner.RefreshWatchSummary();
+
+        StatusText = state == WatchState.Watched
+            ? $"Отмечено просмотренным: {episode.DisplayName}"
+            : $"Снята отметка о просмотре: {episode.DisplayName}";
+    }
+
+    /// <summary>Кнопка «Смотреть»: для сериала продолжает с первой непросмотренной серии.</summary>
     [RelayCommand]
     private void Play()
     {
-        if (SelectedItem is not null)
+        if (SelectedItem is null)
+        {
+            return;
+        }
+
+        if (SelectedItem.NextEpisode is { } next)
+        {
+            PlayEpisode(next);
+            return;
+        }
+
+        try
         {
             PlayerLauncher.Play(SelectedItem.Item);
         }
+        catch (Exception ex)
+        {
+            StatusText = $"Не удалось запустить: {ex.Message}";
+        }
+    }
+
+    /// <summary>Находит плитку, которой принадлежит серия.</summary>
+    private MediaItemViewModel? FindOwner(EpisodeViewModel episode) =>
+        Items.FirstOrDefault(item => item.Episodes.Contains(episode)) ?? SelectedItem;
+
+    /// <summary>Таймер сообщил, что серия досмотрена: обновляем интерфейс.</summary>
+    private void OnEpisodeWatched(EpisodeWatchedEventArgs e)
+    {
+        var owner = Items.FirstOrDefault(item =>
+            string.Equals(item.Item.Path, e.SeriesFolder, StringComparison.OrdinalIgnoreCase));
+        var episode = owner?.Episodes.FirstOrDefault(vm =>
+            string.Equals(vm.Episode.Path, e.EpisodePath, StringComparison.OrdinalIgnoreCase));
+
+        if (owner is null || episode is null)
+        {
+            return;
+        }
+
+        episode.State = WatchState.Watched;
+        owner.RefreshWatchSummary();
+        StatusText = $"Серия «{episode.DisplayName}» отмечена просмотренной.";
     }
 
     /// <summary>Кнопка «Настройки» (окно открывает View).</summary>
@@ -202,5 +326,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         _scanner.Dispose();
         _refreshCts?.Dispose();
+        _tracker.Dispose();
     }
 }

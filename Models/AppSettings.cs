@@ -13,4 +13,13 @@ public class AppSettings
 
     /// <summary>API-ключ сервиса Kinopoisk API Unofficial.</summary>
     public string? KinopoiskApiKey { get; set; }
+
+    /// <summary>Как отмечать серии просмотренными.</summary>
+    public AutoMarkMode AutoMarkMode { get; set; } = AutoMarkMode.AfterThreshold;
+
+    /// <summary>
+    /// Через сколько минут после запуска серии ставить отметку «просмотрено»
+    /// (используется в режиме <see cref="Models.AutoMarkMode.AfterThreshold"/>).
+    /// </summary>
+    public int AutoMarkThresholdMinutes { get; set; } = 10;
 }
